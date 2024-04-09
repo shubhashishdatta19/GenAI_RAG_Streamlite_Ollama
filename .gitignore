@@ -1,12 +1,3 @@
-vectorStore/chroma.sqlite3
-vectorStore/d488c66c-4d80-4176-9eba-83f1a837967d/data_level0.bin
-vectorStore/d488c66c-4d80-4176-9eba-83f1a837967d/header.bin
-vectorStore/d488c66c-4d80-4176-9eba-83f1a837967d/index_metadata.pickle
-vectorStore/d488c66c-4d80-4176-9eba-83f1a837967d/length.bin
-vectorStore/d488c66c-4d80-4176-9eba-83f1a837967d/link_lists.bin
-data/ETL__Testing_Presentation_Final.PDF
-data/Gundecha U. - Learning Selenium Testing Tools with Python - 2014.pdf
-data/Selenium 2 Testing Tools.pdf
-data/Selenium WebDriver Practical Guide by Satya Avasarala - Jan 2014.pdf
-data/teach_your_self_java_in_21_days.pdf
+vectorStore/*
+data/*
 .vscode/settings.json
