@@ -1,5 +1,4 @@
 from PyPDF2 import PdfReader
-# from langchain.document_loaders.pdf import UnstructuredPDFLoader
 from langchain_community.document_loaders.pdf import UnstructuredPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores.chroma import Chroma
@@ -11,7 +10,6 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_community.embeddings.sentence_transformer import SentenceTransformerEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-# from langchain.chains import Retr
 import os
 import streamlit as st
 
@@ -20,7 +18,7 @@ import streamlit as st
 
 pdf_folder_path = "./data/"
 vectore_store_dir = "./vectorStore"
-embedding = OllamaEmbeddings(model="mistral")
+embedding = OllamaEmbeddings(model="codegemma")
 langchain_embedding = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 llm_ollama = Ollama(model="codellama",
              callback_manager=CallbackManager([StreamingStdOutCallbackHandler]))
@@ -36,65 +34,138 @@ else:
 
 
 def load_and_chunk_pdf(pdf_file_path):
+    """
+    Loads and chunks a PDF file into smaller pieces of text.
 
+    Args:
+        pdf_file_path (str): The path to the directory containing the PDF files.
+
+    Returns:
+        list: A list of extracted text chunks from all PDF files.
+    """
+    # Create a list of PDF loaders for all PDF files in the specified directory
     loaders = [UnstructuredPDFLoader(os.path.join(pdf_file_path, fn))
               for fn in os.listdir(pdf_file_path) if fn.endswith('.pdf') ]
+    
+    # Initialize an empty list to store all the extracted text
     all_text= []
+    
+    # Iterate through each PDF loader
     for loader in loaders:
+        # Load the PDF file
         data = loader.load()
-        print("Text spliting initiated for file : " +loader.file_path)
+        
+        # Print a message indicating the initiation of text splitting for the loaded file
+        print("Text splitting initiated for file : " +loader.file_path)
+        
+        # Define a text splitter with specified chunk size and overlap
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size = 1000,
             chunk_overlap=0
         )
+        
+        # Split the document into chunks of specified size and append them to the all_text list
         texts = text_splitter.split_documents(data)
         all_text.extend(texts)
     
+    # Return the combined list of extracted text from all PDF files
     return all_text
 
 def vectorDBLoader(embeddingType):
+    """
+    Loads or creates a vector database using the Chroma library.
+
+    Args:
+        embeddingType (str): The type of embedding to use for vectorization.
+
+    Returns:
+        vectorStore (Chroma): The vector database object.
+
+    Raises:
+        FileNotFoundError: If the vector store directory doesn't exist or is empty.
+    """
+
+    # Check if vector store directory is empty or doesn't exist
     if not os.path.exists(vectore_store_dir) or not os.listdir(vectore_store_dir):
+        # Load and chunk PDF documents from a specified folder path
         all_text = load_and_chunk_pdf(pdf_folder_path)
-        print("Strating data load into the Vectore Store")
-        vectorStore = Chroma.from_documents(documents=all_text, 
-                                            embedding=embeddingType, persist_directory=vectore_store_dir)
+        print("Starting data load into the Vector Store")
+
+        # Create a new vector store using Chroma library
+        vectorStore = Chroma.from_documents(
+            documents=all_text,
+            embedding=embeddingType,
+            persist_directory=vectore_store_dir
+        )
         print("Vector DB load completed")
+
+        # Persist the vector store to disk
         vectorStore.persist()
-        print("Vector Db save to persist directory")
+        print("Vector DB saved to persist directory")
     else:
         print("Loading Vector DB from persistent store")
-        vectorStore = Chroma(persist_directory=vectore_store_dir, embedding_function=embeddingType)
+
+        # Load existing vector store from disk
+        vectorStore = Chroma(
+            persist_directory=vectore_store_dir,
+            embedding_function=embeddingType
+        )
         print("Data loading from persistent store completed")
+
     return vectorStore
 
-def process_llm_response(llm_respose):
-    print(llm_respose["result"])
+def process_llm_response(llm_response):
+    """
+    Prints the result value and sources from the given LLM response.
+
+    Args:
+        llm_response (dict): The LLM response dictionary.
+
+    Returns:
+        None
+    """
+    # Print the value associated with the key "result"
+    print(llm_response["result"])
+
+    # Print the sources from the "source_documents" list
     print('\n\nSources:')
-    for source in llm_respose["source_documents"]:
+    for source in llm_response["source_documents"]:
+        # Access the metadata property of each source and print it
         print(source.metadata['source'])
 
-
 def generate_response(question):
-    prompt_template = """Use the following pieces of context to answer the question at the end. 
+    # Define a prompt template with placeholders for context and question
+    prompt_template = """
+    Use the following pieces of context to answer the question at the end. 
     - If you don't know the answer, just say I do not know.
     - build your answer based on provided documents only.
-    - do NOT answer question out of context, but do try to answer it if you know it. 
+    - do NOT answer question out of context.
     - respond to general greetings as "Selin". 
     {context}
     Question: {question}                                                                        
     """
+    
+    # Create a PromptTemplate object with the defined template and input variables
     PROMPT = PromptTemplate(template=prompt_template, input_variables=["context","question"])
 
+    # Load vectorDB with specified embeddingType
     vectorDB = vectorDBLoader(embeddingType=langchain_embedding)
+    # Create a retriever from the vectorDB
     retriever = vectorDB.as_retriever()
 
+    # Create a RetrievalQA object with specified parameters
     qa_chain = RetrievalQA.from_chain_type(llm=llm_ollama,
                                   chain_type="stuff",
                                   retriever=retriever,
                                   return_source_documents=True,
                                   verbose=True, 
                                   chain_type_kwargs={"prompt":PROMPT})
+
+    # Use the qa_chain to answer the provided question
+    # The question is passed as a dictionary with "query" key
     response = qa_chain({"query":question})
+
+    # Return the generated response
     return response
 
 def main():
