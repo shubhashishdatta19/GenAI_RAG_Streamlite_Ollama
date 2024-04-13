@@ -10,6 +10,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_community.embeddings.sentence_transformer import SentenceTransformerEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
+from langchain_community.llms.llamacpp import LlamaCpp
 import os
 import streamlit as st
 
@@ -18,13 +19,27 @@ import streamlit as st
 
 pdf_folder_path = "./data/"
 vectore_store_dir = "./vectorStore"
-embedding = OllamaEmbeddings(model="codegemma")
+embedding = OllamaEmbeddings(model="phi")
 langchain_embedding = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-llm_ollama = Ollama(model="codellama",
-             callback_manager=CallbackManager([StreamingStdOutCallbackHandler]))
+
+llm_ollama = Ollama(model="codegemma",
+             callback_manager=CallbackManager([StreamingStdOutCallbackHandler]),
+             temperature=0.2,
+             verbose=True,
+             num_gpu=4)
+
 llm_openAI = ChatOpenAI(api_key=os.getenv("OPENAI_API_KEY"),
                         model="gpt-3.5-turbo",
                         temperature=0.5)
+
+llm_cpp = LlamaCpp(
+    model_path="C:\\AI\\model\\mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+    temperature=0.75, n_ctx=2048,
+    top_p=1,
+    callback_manager=CallbackManager([StreamingStdOutCallbackHandler]),
+    verbose=True, 
+     n_gpu_layers=4 # Verbose is required to pass to the callback manager
+)
 
 
 if not os.path.exists(pdf_folder_path):
@@ -154,7 +169,7 @@ def generate_response(question):
     retriever = vectorDB.as_retriever()
 
     # Create a RetrievalQA object with specified parameters
-    qa_chain = RetrievalQA.from_chain_type(llm=llm_ollama,
+    qa_chain = RetrievalQA.from_chain_type(llm=llm_cpp,
                                   chain_type="stuff",
                                   retriever=retriever,
                                   return_source_documents=True,
@@ -220,8 +235,5 @@ def main():
 
 
     
-
-
-
 if __name__ == '__main__':
     main()

@@ -13,3 +13,8 @@ It defines a function generate_response that takes a user's question as input an
 It defines a function main that handles the logic for interacting with the chatbot using Streamlit, including taking user input, generating a response, and displaying the conversation.
 The main function is executed if the script is run directly.
 Overall, this code sets up the necessary components for a chatbot that can answer questions based on the content of PDF documents.
+
+Reference -
+https://medium.com/@Stan_DS/creating-a-retrieval-augmented-generation-rag-model-on-your-laptop-for-free-0ca119d03c48
+https://medium.com/@rubentak/talk-to-your-files-in-a-local-rag-application-using-mistral-7b-langchain-and-chroma-db-no-2b4ba77358e0
+
