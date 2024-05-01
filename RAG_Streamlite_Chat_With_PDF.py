@@ -19,10 +19,10 @@ import streamlit as st
 
 pdf_folder_path = "./data/"
 vectore_store_dir = "./vectorStore"
-embedding = OllamaEmbeddings(model="phi")
+embedding = OllamaEmbeddings(model="phi3")
 langchain_embedding = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
-llm_ollama = Ollama(model="codegemma",
+llm_ollama = Ollama(model="phi3",
              callback_manager=CallbackManager([StreamingStdOutCallbackHandler]),
              temperature=0.2,
              verbose=True,
@@ -169,7 +169,7 @@ def generate_response(question):
     retriever = vectorDB.as_retriever()
 
     # Create a RetrievalQA object with specified parameters
-    qa_chain = RetrievalQA.from_chain_type(llm=llm_cpp,
+    qa_chain = RetrievalQA.from_chain_type(llm=llm_ollama,
                                   chain_type="stuff",
                                   retriever=retriever,
                                   return_source_documents=True,
